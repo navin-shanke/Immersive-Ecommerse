@@ -5,7 +5,8 @@ Scope: verify every storefront/admin flow after the backend migration, classify 
 Method: static review + live API calls with real Sanctum tokens + `tsc`/`next build`.
 
 > **Follow-up (same day):** all CRITICAL and HIGH issues have been fixed and verified. See
-> the [Resolution Log](#resolution-log) at the bottom. MEDIUM/LOW items remain documented but not fixed.
+> the [Resolution Log](#resolution-log) at the bottom. MEDIUM/LOW items were documented and
+> later resolved — see the status column and the [Late Fixes](#late-fixes) section.
 
 ---
 
@@ -18,10 +19,10 @@ Method: static review + live API calls with real Sanctum tokens + `tsc`/`next bu
 | 3 | HIGH | `next build` fails type-check (pre-existing `ProductForm.tsx` errors) | **FIXED & VERIFIED** |
 | 4 | HIGH | Admin category edit always fails (422 slug collision) | **FIXED & VERIFIED** |
 | 5 | HIGH | Product detail page color swatches broken (variant shape mismatch) | **FIXED & VERIFIED** |
-| 6 | MEDIUM | `api.ts` JWT-expiry decode runs on Sanctum opaque tokens (dead/wasteful path) | CONFIRMED — not fixed |
+| 6 | MEDIUM | `api.ts` JWT-expiry decode runs on Sanctum opaque tokens (dead/wasteful path) | FIXED — removed dead branch |
 | 7 | MEDIUM | Brand filter is dead (frontend hardcodes `brand:''`; no brand field in API) | CONFIRMED — not fixed |
-| 8 | LOW | `CategoryResource` duplicated fallback expression | CONFIRMED — not fixed |
-| 9 | LOW | `docs/API.md` describes the old Express/Mongo backend (fully stale) | CONFIRMED — not fixed |
+| 8 | LOW | `CategoryResource` duplicated fallback expression | FIXED — deduped |
+| 9 | LOW | `docs/API.md` describes the old Express/Mongo backend (fully stale) | FIXED — deleted |
 
 ---
 
@@ -199,3 +200,21 @@ The verification run created cart/order rows for user id 1 (admin). Left in plac
 ```php
 App\Models\Order::truncate(); App\Models\OrderItem::truncate(); App\Models\CartItem::truncate(); App\Models\Cart::truncate();
 ```
+
+---
+
+## Late Fixes
+
+Applied after the original audit, low-risk cleanups:
+
+### #6 — removed dead JWT-expiry decode in `frontend/src/lib/api.ts`
+
+The 401 interceptor decoded the access token as a JWT to check `exp`, but Sanctum OPQRST tokens are opaque (`67|a1b2…`, no dot-separated payload), so the branch always threw and fell through to the refresh path. Removed the dead branch; 401 now goes straight to the refresh flow.
+
+### #8 — deduped `CategoryResource` fallback
+
+`CategoryResource` emitted `'productCount' => $this->product_count ?? $this->product_count ?? 0` — duplicated fallback expression. Now single `?? 0`.
+
+### #9 — deleted stale docs
+
+`docs/API.md`, `docs/ARCHITECTURE.md`, `docs/SETUP.md` documented the pre-migration Express/MongoDB/Stripe stack. None were referenced by the README. Deleted. Superpowers planning artifacts under `docs/superpowers/` (guest-cart/admin-dashboard specs) also removed as stale scratch docs.
