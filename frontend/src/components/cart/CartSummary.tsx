@@ -12,10 +12,10 @@ export default function CartSummary() {
   const [promoError, setPromoError] = useState('');
   const [promoSuccess, setPromoSuccess] = useState('');
 
-  const discountAmount = promoCode ? Math.round(cart.total * promoDiscount / 100) : 0;
+  const discountAmount = promoCode ? Math.round(cart.total * promoDiscount) / 100 : 0;
   const subtotalAfterDiscount = cart.total - discountAmount;
   const shipping = subtotalAfterDiscount > 100 ? 0 : 9.99;
-  const tax = Math.round(subtotalAfterDiscount * 0.08);
+  const tax = Math.round(subtotalAfterDiscount * 0.08 * 100) / 100;
   const total = subtotalAfterDiscount + shipping + tax;
 
   const handleApplyPromo = () => {

@@ -74,6 +74,10 @@ export default function ProductsPageClient() {
 
   const [localFilters, setLocalFilters] = useState<Omit<FiltersType, 'brand' | 'category'>>({});
 
+  const urlQuery = searchParams.get('q') ?? '';
+  const urlSort = searchParams.get('sort') ?? '';
+  const urlSale = searchParams.get('sale') === 'true';
+
   const filters: FiltersType = {
     ...localFilters,
     brand: searchParams.get('brand') ?? undefined,
@@ -84,7 +88,12 @@ export default function ProductsPageClient() {
     async function fetchProducts() {
       try {
         setLoading(true);
-        const response = await api.get('/products?limit=50');
+        const params = new URLSearchParams({ limit: '50' });
+        if (searchParams.get('sort') === 'newest') params.set('sort', 'newest');
+        if (searchParams.get('sale') === 'true') params.set('sale', 'true');
+        const q = searchParams.get('q');
+        if (q) params.set('search', q);
+        const response = await api.get(`/products?${params.toString()}`);
         const data = response.data;
 
         if (data.success && data.data?.products) {
@@ -105,9 +114,9 @@ export default function ProductsPageClient() {
     }
 
     fetchProducts();
-  }, []);
+  }, [searchParams]);
 
-  const filteredProducts = products.filter((product) => {
+  let filteredProducts = products.filter((product) => {
     if (filters.category && product.category !== filters.category) return false;
     if (filters.brand && product.brand !== filters.brand) return false;
     if (filters.minPrice && product.price < filters.minPrice) return false;
@@ -123,6 +132,30 @@ export default function ProductsPageClient() {
     if (filters.rating && product.averageRating < filters.rating) return false;
     return true;
   });
+
+  if (urlSale) {
+    filteredProducts = filteredProducts.filter((p) => p.salePrice !== undefined);
+  }
+
+  if (urlQuery.trim()) {
+    const term = urlQuery.trim().toLowerCase();
+    filteredProducts = filteredProducts.filter((p) =>
+      p.name.toLowerCase().includes(term) ||
+      p.description.toLowerCase().includes(term) ||
+      (p.category || '').toLowerCase().includes(term) ||
+      (p.tags || []).some((t) => t.toLowerCase().includes(term))
+    );
+  }
+
+  if (urlSort === 'price_asc') {
+    filteredProducts = [...filteredProducts].sort((a, b) => a.price - b.price);
+  } else if (urlSort === 'price_desc') {
+    filteredProducts = [...filteredProducts].sort((a, b) => b.price - a.price);
+  } else if (urlSort === 'newest') {
+    filteredProducts = [...filteredProducts].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  } else if (urlSort === 'popular') {
+    filteredProducts = [...filteredProducts].sort((a, b) => b.reviewCount - a.reviewCount);
+  }
 
   const handleFilterChange = (newFilters: FiltersType) => {
     const { brand, category, ...rest } = newFilters;

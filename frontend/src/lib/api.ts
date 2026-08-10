@@ -2,11 +2,8 @@ import axios from 'axios';
 
 const getBaseURL = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-  // Production deployment
-  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
-    return 'https://backend-lilac-seven-64.vercel.app/api';
-  }
-  return 'http://localhost:4000/api';
+  // Local Laravel dev server (`php artisan serve`, port 8000)
+  return 'http://localhost:8000/api';
 };
 
 const api = axios.create({
@@ -69,16 +66,6 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-
-      const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
-        try {
-          const payload = JSON.parse(atob(accessToken.split('.')[1] || ''));
-          if (payload.exp && payload.exp > Date.now() / 1000) {
-            return api(originalRequest);
-          }
-        } catch {}
-      }
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');

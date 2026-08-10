@@ -36,6 +36,7 @@ class CheckoutController extends Controller
             'shippingAddress.country' => ['required', 'string'],
             'shippingAddress.phone' => ['nullable', 'string'],
             'shippingMethod' => ['nullable', 'string'],
+            'promoCode' => ['nullable', 'string'],
         ]);
 
         $cart = $request->user()->cart;
@@ -82,9 +83,31 @@ class CheckoutController extends Controller
             ], 422);
         }
 
-        $shipping = $subtotal > 100 ? 0.0 : 9.99;
-        $tax = round($subtotal * 0.08, 2);
-        $total = round($subtotal + $shipping + $tax, 2);
+        $discount = 0.0;
+        $promoCode = $validated['promoCode'] ?? null;
+        if ($promoCode) {
+            $promos = config('promos', []);
+            $code = strtoupper(trim($promoCode));
+            $promo = $promos[$code] ?? null;
+            if (! $promo) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid promo code',
+                ], 422);
+            }
+            if ($subtotal < (float) $promo['minPurchase']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Minimum purchase of $" . number_format((float) $promo['minPurchase'], 2) . ' required for this promo',
+                ], 422);
+            }
+            $discount = round($subtotal * ((float) $promo['discountPercent'] / 100), 2);
+        }
+
+        $discountedSubtotal = round($subtotal - $discount, 2);
+        $shipping = $discountedSubtotal > 100 ? 0.0 : 9.99;
+        $tax = round($discountedSubtotal * 0.08, 2);
+        $total = round($discountedSubtotal + $shipping + $tax, 2);
 
         $order = Order::create([
             'user_id' => $request->user()->id,
@@ -93,7 +116,7 @@ class CheckoutController extends Controller
             'subtotal' => round($subtotal, 2),
             'shipping' => $shipping,
             'tax' => $tax,
-            'discount' => 0,
+            'discount' => $discount,
             'total' => $total,
             'currency' => 'INR',
             'shipping_method' => $validated['shippingMethod'] ?? 'standard',

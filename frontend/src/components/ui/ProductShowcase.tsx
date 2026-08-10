@@ -68,7 +68,7 @@ export default function ProductShowcase({ products, intervalMs = 3000 }: Product
               src={product.images[0]?.url}
               alt={product.images[0]?.alt || product.name}
               fill
-              unoptimized
+              priority
               sizes="(max-width: 768px) 100vw, 480px"
               className="object-cover"
             />

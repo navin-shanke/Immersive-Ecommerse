@@ -29,6 +29,7 @@ export default function CheckoutPage() {
   } | null>(null);
   const cart = useCartStore((s) => s.cart);
   const clearCart = useCartStore((s) => s.clearCart);
+  const promoCode = useCartStore((s) => s.promoCode);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
@@ -50,6 +51,7 @@ export default function CheckoutPage() {
           phone: address.phone || '',
         },
         shippingMethod: 'standard',
+        promoCode: promoCode || undefined,
       });
       setRazorpayOrder({
         orderId: data.data.orderId,

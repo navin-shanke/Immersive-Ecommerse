@@ -10,6 +10,7 @@ use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\PublicProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // ─── Checkout ───────────────────────────────────────────────────────────
     Route::post('/checkout/create-order', [CheckoutController::class, 'createOrder']);
     Route::post('/checkout/verify', [CheckoutController::class, 'verify']);
+
+    // Customer orders
+    Route::get('/orders', [CustomerOrderController::class, 'index']);
+    Route::get('/orders/{id}', [CustomerOrderController::class, 'show']);
 });
 
 // ─── Public catalogue ───────────────────────────────────────────────────────

@@ -77,6 +77,7 @@ export default function ImageGallery({ images, variantImages }: ImageGalleryProp
               fill
               className="object-cover"
               sizes="80px"
+              loading={index === 0 ? 'eager' : 'lazy'}
             />
           </motion.button>
         ))}

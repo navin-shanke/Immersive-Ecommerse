@@ -102,11 +102,15 @@ export default function HomePage() {
   const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
 
   useEffect(() => {
+    if (introSeen) {
+      return;
+    }
     if (introComplete && shouldShowIntro) {
       sessionStorage.setItem('intro-seen', '1');
-      setTimeout(() => setShowContent(true), 100);
+      const t = setTimeout(() => setShowContent(true), 100);
+      return () => clearTimeout(t);
     }
-  }, [introComplete, shouldShowIntro]);
+  }, [introSeen, introComplete, shouldShowIntro]);
 
   useEffect(() => {
     async function fetchFeaturedProducts() {

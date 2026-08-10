@@ -63,6 +63,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             src={imageUrl}
             alt={product.name}
             fill
+            loading={index < 4 ? 'eager' : 'lazy'}
             className={`object-cover transition-transform duration-500 ${isHovered ? 'scale-105' : 'scale-100'}`}
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />

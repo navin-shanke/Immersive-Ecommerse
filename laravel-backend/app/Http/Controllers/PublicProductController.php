@@ -38,6 +38,10 @@ class PublicProductController extends Controller
             $query->where('featured', $featured);
         }
 
+        if (filter_var($request->query('sale'), FILTER_VALIDATE_BOOLEAN)) {
+            $query->whereHas('variants', fn ($v) => $v->whereNotNull('sale_price')->where('sale_price', '<>', 0));
+        }
+
         $search = $request->query('search');
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -57,6 +61,9 @@ class PublicProductController extends Controller
                 break;
             case 'name':
                 $query->orderBy('name');
+                break;
+            case 'popular':
+                $query->orderByDesc('featured')->orderByDesc('created_at');
                 break;
             case 'newest':
                 $query->orderByDesc('created_at');
