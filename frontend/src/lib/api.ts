@@ -2,8 +2,8 @@ import axios from 'axios';
 
 const getBaseURL = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
-  // Local Laravel dev server (`php artisan serve`, port 8000)
-  return 'http://localhost:8000/api';
+  // Local Laravel dev server (php artisan serve, port 4000) — falls back only when NEXT_PUBLIC_API_URL is unset
+  return 'http://localhost:4000/api';
 };
 
 const api = axios.create({
