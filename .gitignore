@@ -7,7 +7,6 @@ dist/
 .env
 .env.local
 .env.production
-backend/.env
 
 # IDE
 .vscode/
@@ -31,7 +30,3 @@ Thumbs.db
 
 # Local build artifacts
 frontend/build_output.txt
-
-# Design artifacts (local references only, not used by the app)
-admin-panel.zip
-immersive-admin.html
