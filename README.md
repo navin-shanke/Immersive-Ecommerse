@@ -84,18 +84,7 @@ Immersive-Ecommerse/
 │       ├── migrations/          # Schema incl. settings + order_status_histories
 │       └── seeders/             # Categories, products, admin, 40 customers, 240 orders
 │
-├── backend/                     # Express + TypeScript API (alternative backend)
-│   └── src/
-│       ├── controllers/         # auth, cart, checkout, oauth, product, webhook
-│       ├── models/              # User, Product, Category, Cart, Order (Mongoose)
-│       ├── routes/              # auth, oauth, products, cart, checkout, orders, webhooks
-│       ├── middleware/          # JWT auth, rate limit, zod validation, error handler
-│       ├── schemas/             # Zod validation schemas
-│       ├── lib/                 # mongoose.ts, razorpay.ts
-│       ├── utils/               # ApiError, asyncHandler, jwt helpers
-│       └── seeds/               # Database seeder
-│
-└── docs/                        # API.md, ARCHITECTURE.md, SETUP.md
+└── docs/                        # MIGRATION_AUDIT_REPORT.md
 ```
 
 ---
@@ -129,17 +118,6 @@ Immersive-Ecommerse/
 | [MySQL](https://mysql.com) | 8 | Database |
 | [Laravel Sanctum](https://laravel.com/docs/sanctum) | 4 | Bearer-token API auth (`access` / `refresh` tokens) |
 | [Razorpay API](https://razorpay.com) | Orders API | Payment orders + HMAC-SHA256 signature verification |
-
-### Backend (alternative — `backend/`)
-
-An Express + TypeScript + MongoDB API ships in `backend/` for reference. It is **not** used by the frontend by default; it still describes auth, cart, checkout, and a Razorpay webhook for teams that want to run against Express instead of Laravel.
-
-| Technology | Version | Purpose |
-|---|---|---|
-| [Express](https://expressjs.com) | 4 | REST API server |
-| [MongoDB Atlas](https://mongodb.com) + [Mongoose](https://mongoosejs.com) | 8 | Database + ODM |
-| [JWT](https://jwt.io) (jsonwebtoken) | 9 | Access + refresh tokens |
-| [Zod](https://zod.dev) | 3 | Runtime request validation |
 
 ---
 
@@ -284,10 +262,6 @@ npm run dev       # → http://localhost:3000
 
 `NEXT_PUBLIC_RAZORPAY_KEY_ID` must match the `RAZORPAY_KEY_ID` in the backend `.env`. Restart `npm run dev` after changing it.
 
-### Alternative Node backend
-
-The monorepo also ships a Node/Express/MongoDB backend in `backend/` (see `backend/README.md`). It is not used by the frontend by default; run it only if you intend to develop against Express instead of Laravel.
-
 ---
 
 ## 🔧 Environment Variables
@@ -328,26 +302,6 @@ NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
 ```
 
 `NEXT_PUBLIC_API_URL` must point at the running Laravel server (`/api`). `NEXT_PUBLIC_RAZORPAY_KEY_ID` must match the backend `RAZORPAY_KEY_ID`, otherwise the Razorpay checkout modal cannot open. Restart `npm run dev` after changing either.
-
-### `backend/.env` (optional Node backend)
-
-```env
-PORT=4000
-NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/immersive-ecommerce
-JWT_SECRET=your-super-secret-jwt-key
-JWT_REFRESH_SECRET=your-super-secret-refresh-key
-JWT_EXPIRES_IN=15m
-JWT_REFRESH_EXPIRES_IN=7d
-
-# Razorpay test keys
-RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
-RAZORPAY_KEY_SECRET=your_razorpay_key_secret
-RAZORPAY_WEBHOOK_SECRET=your_razorpay_webhook_secret
-
-OAUTH_STATE_SECRET=random-signing-string
-FRONTEND_URL=http://localhost:3000
-```
 
 ---
 
@@ -460,8 +414,6 @@ php artisan migrate --force --no-interaction && php artisan serve --host=0.0.0.0
 - No `storage:link` needed — product images are external URLs
 
 > ⚠️ `config/cors.php` currently allows `allowed_origins: ['*']` with `supports_credentials: true`. Laravel reflects the requester origin under credentials, so cross-origin works, but for production you should pin it to your Vercel origin.
-
-> The Express/Mongo `backend/` alternative deploys separately (see `backend/README.md`) and is not part of the default Vercel → Railway stack.
 
 ---
 
