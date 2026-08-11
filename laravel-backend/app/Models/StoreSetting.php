@@ -54,6 +54,20 @@ class StoreSetting extends Model
     }
 
     /**
+     * Read a setting as a boolean.
+     */
+    public static function bool(string $group, string $key, bool $default = false): bool
+    {
+        $value = static::get($group, $key);
+
+        if ($value === null) {
+            return $default;
+        }
+
+        return filter_var((string) $value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
      * Fetch all settings as { "group": { "key": value, ... } }.
      */
     public static function allGrouped(): array

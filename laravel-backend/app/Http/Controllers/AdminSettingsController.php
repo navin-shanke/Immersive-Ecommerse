@@ -41,6 +41,8 @@ class AdminSettingsController extends Controller
         Cache::forget('admin.analytics.90');
         Cache::forget('admin.analytics.365');
         Cache::forget('admin.analytics.all');
+        Cache::forget('store.public.settings');
+        Cache::forget('store.maintenance');
 
         return response()->json([
             'success' => true,

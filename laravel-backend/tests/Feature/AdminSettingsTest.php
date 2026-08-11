@@ -43,6 +43,8 @@ class AdminSettingsTest extends TestCase
     public function test_update_upserts_and_forgets_cache(): void
     {
         \Illuminate\Support\Facades\Cache::put('admin.dashboard', ['dummy'], 60);
+        \Illuminate\Support\Facades\Cache::put('store.public.settings', ['dummy'], 60);
+        \Illuminate\Support\Facades\Cache::put('store.maintenance', ['dummy'], 60);
 
         $this->actingAs($this->admin(), 'sanctum')
             ->putJson('/api/admin/settings', [
@@ -59,6 +61,8 @@ class AdminSettingsTest extends TestCase
             'value' => '12.99',
         ]);
         $this->assertFalse(\Illuminate\Support\Facades\Cache::has('admin.dashboard'));
+        $this->assertFalse(\Illuminate\Support\Facades\Cache::has('store.public.settings'));
+        $this->assertFalse(\Illuminate\Support\Facades\Cache::has('store.maintenance'));
     }
 
     public function test_update_validates_group(): void

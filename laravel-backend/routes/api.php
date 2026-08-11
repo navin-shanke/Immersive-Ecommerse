@@ -13,6 +13,7 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\PublicProductController;
+use App\Http\Controllers\PublicSettingsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -46,11 +47,17 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 // ─── Public catalogue ───────────────────────────────────────────────────────
-Route::get('/products/search', [PublicProductController::class, 'search']);
-Route::get('/products/categories', [PublicProductController::class, 'categories']);
-Route::get('/products/{id}/related', [PublicProductController::class, 'related']);
-Route::get('/products/{idOrSlug}', [PublicProductController::class, 'show']);
-Route::get('/products', [PublicProductController::class, 'index']);
+Route::middleware(['maintenance'])->group(function () {
+    Route::get('/products/search', [PublicProductController::class, 'search']);
+    Route::get('/products/categories', [PublicProductController::class, 'categories']);
+    Route::get('/products/{id}/related', [PublicProductController::class, 'related']);
+    Route::get('/products/{idOrSlug}', [PublicProductController::class, 'show']);
+    Route::get('/products', [PublicProductController::class, 'index']);
+});
+
+// ─── Public settings (always reachable) ────────────────────────────────────
+Route::get('/settings/public', [PublicSettingsController::class, 'index']);
+Route::get('/settings/public/maintenance', [PublicSettingsController::class, 'maintenance']);
 
 // ─── Admin ──────────────────────────────────────────────────────────────────
 Route::middleware(['auth:sanctum', 'admin'])->prefix('/admin')->group(function () {
