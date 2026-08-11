@@ -10,7 +10,6 @@ import ColorSwatch from '@/components/product/ColorSwatch';
 import AddToCartButton from '@/components/product/AddToCartButton';
 import RatingStars from '@/components/ui/RatingStars';
 import PriceTag from '@/components/ui/PriceTag';
-import ReviewsSection from '@/components/product/ReviewsSection';
 import ProductRecommendations from '@/components/product/ProductRecommendations';
 import { useWishlistStore } from '@/stores/useWishlistStore';
 import { useUIStore } from '@/stores/useUIStore';
@@ -141,16 +140,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const isInWishlist = useWishlistStore((s) => product ? s.isInWishlist(product.id) : false);
   const addToast = useUIStore((s) => s.addToast);
 
-  const [reviewsList, setReviewsList] = useState(product?.reviews || []);
-  const [localRating, setLocalRating] = useState(product?.averageRating || 0);
-  const [localReviewCount, setLocalReviewCount] = useState(product?.reviewCount || 0);
   const [prevProductId, setPrevProductId] = useState<string | undefined>(product?.id);
 
   if (product && prevProductId !== product.id) {
     setPrevProductId(product.id);
-    setReviewsList(product.reviews);
-    setLocalRating(product.averageRating);
-    setLocalReviewCount(product.reviewCount);
     setSelectedSize(null);
     setSelectedColor(null);
   }
@@ -213,20 +206,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       type: 'success',
       message: isInWishlist ? 'Removed from wishlist' : 'Added to wishlist',
     });
-  };
-
-  const handleAddReview = (review: { rating: number; title: string; comment: string }) => {
-    const newReview = {
-      id: `r${Date.now()}`,
-      userId: 'current-user',
-      userName: 'You',
-      ...review,
-      createdAt: new Date().toISOString(),
-      verified: false,
-    };
-    setReviewsList((prev) => [newReview, ...prev]);
-    setLocalReviewCount((prev) => prev + 1);
-    addToast({ type: 'success', message: 'Review submitted!' });
   };
 
   const variantImages = selectedColor
@@ -329,9 +308,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </button>
               </div>
               <div className="flex items-center gap-3 mt-2">
-                <RatingStars rating={localRating} />
+                <RatingStars rating={product.averageRating} />
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {localRating} ({localReviewCount} reviews)
+                  {product.averageRating} ({product.reviewCount} reviews)
                 </span>
               </div>
             </div>
@@ -405,16 +384,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </div>
             </div>
           </motion.div>
-        </div>
-
-        {/* Reviews Section */}
-        <div className="mt-16 border-t border-gray-100 dark:border-zinc-800 pt-10">
-          <ReviewsSection
-            reviews={reviewsList}
-            averageRating={localRating}
-            reviewCount={localReviewCount}
-            onAddReview={handleAddReview}
-          />
         </div>
 
         {/* Recommendations */}

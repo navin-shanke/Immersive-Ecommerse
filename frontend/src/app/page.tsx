@@ -348,44 +348,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Newsletter */}
-        <section className="py-16 px-4 bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 relative overflow-hidden">
-          <AmbientBackground className="opacity-20" />
-
-          <div className="relative z-10 max-w-2xl mx-auto text-center">
-            <motion.h2
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              className="text-2xl font-bold text-white mb-2"
-            >
-              Stay in the Loop
-            </motion.h2>
-            <p className="text-gray-400 mb-6">
-              Get early access to new drops, exclusive deals, and updates.
-            </p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="flex gap-3 max-w-md mx-auto"
-            >
-              <label htmlFor="newsletter-email" className="sr-only">Email address</label>
-              <input
-                id="newsletter-email"
-                type="email"
-                placeholder="Enter your email"
-                aria-label="Email address"
-                className="flex-1 px-4 py-3 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:border-indigo-400"
-              />
-              <button className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-500 transition-colors">
-                Subscribe
-              </button>
-            </motion.div>
-            <p className="text-gray-500 dark:text-gray-400 text-xs mt-3">No spam. Unsubscribe anytime.</p>
-          </div>
-        </section>
       </div>
     </>
   );
