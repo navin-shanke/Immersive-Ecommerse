@@ -10,8 +10,13 @@ import { useUIStore } from '@/stores/useUIStore';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import Logo from '@/components/ui/Logo';
 import { cn } from '@/lib/utils';
+import type { PublicStoreSettings } from '@/lib/store-settings';
 
-export default function Navbar() {
+interface NavbarProps {
+  settings?: PublicStoreSettings;
+}
+
+export default function Navbar({ settings }: NavbarProps) {
   const [scrolled, setScrolled] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -48,11 +53,16 @@ export default function Navbar() {
           : 'bg-white dark:bg-zinc-950'
       )}
     >
+      {settings?.store.announcement ? (
+        <div className="h-8 bg-indigo-600 text-white text-xs font-medium flex items-center justify-center px-4 text-center">
+          {settings.store.announcement}
+        </div>
+      ) : null}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/">
-            <Logo size="md" />
+            <Logo size="md" name={settings?.store.name} />
           </Link>
 
           {/* Nav links */}

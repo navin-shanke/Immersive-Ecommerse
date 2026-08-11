@@ -4,9 +4,10 @@ interface LogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
   withText?: boolean;
+  name?: string;
 }
 
-export default function Logo({ className, size = 'md', withText = true }: LogoProps) {
+export default function Logo({ className, size = 'md', withText = true, name = 'IMMERSIVE' }: LogoProps) {
   const sizes = {
     sm: { icon: 24, text: 'text-sm', gap: 'gap-1.5' },
     md: { icon: 32, text: 'text-lg', gap: 'gap-2' },
@@ -78,7 +79,7 @@ export default function Logo({ className, size = 'md', withText = true }: LogoPr
       {/* Brand Text */}
       {withText && (
         <span className={cn('font-bold tracking-tight text-gray-900 dark:text-white', s.text)}>
-          IMMERSIVE
+          {name}
         </span>
       )}
     </div>
