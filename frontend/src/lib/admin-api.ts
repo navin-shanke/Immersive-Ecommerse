@@ -237,5 +237,11 @@ export async function updateAdminSettings(group: string, settings: Record<string
   return data;
 }
 
+/** Upload an image file and return the stored absolute URL. */
+export async function uploadAdminImage(file: File): Promise<{ url: string }> {
+  const { data } = await api.postForm<{ success: boolean; data: { url: string } }>('/admin/uploads', { file });
+  return data.data;
+}
+
 export type { AdminMeta, AdminOrder, AdminSettings, AdminDashboard, AdminAnalytics };
 export type { AdminCategory, AdminProduct };

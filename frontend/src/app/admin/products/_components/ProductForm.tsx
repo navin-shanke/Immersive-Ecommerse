@@ -1,11 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Image from 'next/image';
-import { Plus, X, Trash2, ImagePlus, Package } from 'lucide-react';
+import { Plus, X, Trash2, ImagePlus, Package, UploadCloud } from 'lucide-react';
 import type { AdminCategory, AdminProduct } from '@/types/admin';
 import type { ProductPayload, ProductImagePayload } from '@/lib/admin-api';
+import { uploadAdminImage } from '@/lib/admin-api';
+import { useUIStore } from '@/stores/useUIStore';
 import { Button, Card, Field, Input, Select, Textarea, Toggle } from '../../_components/ui';
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 interface ProductFormProps {
   initial?: AdminProduct | null;
@@ -97,6 +101,10 @@ function slugify(s: string): string {
 export default function ProductForm({ initial, categories, submitting, onSubmit }: ProductFormProps) {
   const [form, setForm] = useState<FormState>(() => toFormState(initial ?? null));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [uploading, setUploading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const addToast = useUIStore((s) => s.addToast);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -112,6 +120,44 @@ export default function ProductForm({ initial, categories, submitting, onSubmit 
       ...prev,
       variants: prev.variants.map((v, i) => (i === index ? { ...v, ...patch } : v)),
     }));
+
+  async function handleFiles(files: FileList | File[]) {
+    const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (list.length === 0) {
+      addToast({ type: 'error', message: 'Only image files are supported.' });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const uploaded = [...form.images];
+      for (const file of list) {
+        if (file.size > MAX_IMAGE_SIZE) {
+          addToast({ type: 'error', message: `${file.name} is larger than 5 MB and was skipped.` });
+          continue;
+        }
+        const { url } = await uploadAdminImage(file);
+        uploaded.push({ url, alt: '', width: null, height: null });
+      }
+      set('images', uploaded);
+      addToast({ type: 'success', message: 'Image uploaded.' });
+    } catch {
+      addToast({ type: 'error', message: 'Upload failed. Check your connection and try again.' });
+    } finally {
+      setUploading(false);
+      setDragging(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    void handleFiles(e.dataTransfer.files);
+  }
+
+  function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files) void handleFiles(e.target.files);
+  }
 
   function validate(): boolean {
     const e: Record<string, string> = {};
@@ -262,12 +308,40 @@ export default function ProductForm({ initial, categories, submitting, onSubmit 
                 onClick={() => set('images', [...form.images, { url: '', alt: '', width: null, height: null }])}
               >
                 <ImagePlus className="w-4 h-4" />
-                Add image
+                Add by URL
               </Button>
             </div>
+
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => !uploading && fileInputRef.current?.click()}
+              className={`cursor-pointer rounded-lg border-2 border-dashed p-6 flex flex-col items-center justify-center gap-2 text-center transition-colors ${
+                dragging ? 'border-indigo-400 bg-indigo-500/10' : 'border-zinc-800 hover:border-zinc-600'
+              }`}
+            >
+              <UploadCloud className={`w-7 h-7 ${uploading ? 'text-indigo-400 animate-pulse' : 'text-zinc-500'}`} />
+              <p className="text-sm text-zinc-300">
+                {uploading ? 'Uploading…' : <>Drag &amp; drop images here, or <span className="text-indigo-400 font-medium">browse</span></>}
+              </p>
+              <p className="text-xs text-zinc-500">JPG, PNG, WebP, GIF, AVIF, BMP or SVG · up to 5 MB each</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handleFileInput}
+              />
+            </div>
+
             {form.images.length === 0 ? (
               <p className="text-sm text-zinc-500 py-4 text-center border border-dashed border-zinc-800 rounded-lg">
-                No images yet. Add at least one by URL.
+                No images yet. Drop files above or add one by URL.
               </p>
             ) : (
               <div className="space-y-3">
@@ -281,7 +355,7 @@ export default function ProductForm({ initial, categories, submitting, onSubmit 
                       )}
                     </div>
                     <div className="flex-1 space-y-2">
-                      <Input placeholder="Image URL (e.g. /images/headphones.jpg)" value={img.url} onChange={(e) => setImage(index, { url: e.target.value })} />
+                      <Input placeholder="Paste an image URL (external images)" value={img.url} onChange={(e) => setImage(index, { url: e.target.value })} />
                       <div className="grid grid-cols-3 gap-2">
                         <Input placeholder="Alt text" value={img.alt ?? ''} onChange={(e) => setImage(index, { alt: e.target.value })} />
                         <Input type="number" placeholder="Width" value={img.width ?? ''} onChange={(e) => setImage(index, { width: e.target.value ? Number(e.target.value) : null })} />
