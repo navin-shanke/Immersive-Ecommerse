@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AdminUploadController;
 use App\Http\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
@@ -79,4 +80,6 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('/admin')->group(function (
 
     Route::get('/settings', [AdminSettingsController::class, 'index']);
     Route::put('/settings', [AdminSettingsController::class, 'update']);
+
+    Route::post('/uploads', [AdminUploadController::class, 'store']);
 });
