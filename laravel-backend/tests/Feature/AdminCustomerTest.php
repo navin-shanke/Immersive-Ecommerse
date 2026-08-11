@@ -39,6 +39,30 @@ class AdminCustomerTest extends TestCase
             ->assertJsonPath('data.meta.total', 3);
     }
 
+    public function test_index_includes_last_order_at_for_each_customer(): void
+    {
+        $customer = $this->customer();
+        $lastOrderAt = now()->subDays(2)->startOfSecond();
+        Order::factory()->create(['user_id' => $customer->id, 'created_at' => $lastOrderAt]);
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/admin/customers')
+            ->assertOk()
+            ->assertJsonPath('data.meta.total', 1)
+            ->assertJsonPath('data.items.0._id', (string) $customer->id)
+            ->assertJsonPath('data.items.0.lastOrderAt', $lastOrderAt->toISOString());
+    }
+
+    public function test_index_returns_null_last_order_at_for_customer_without_orders(): void
+    {
+        $this->customer();
+
+        $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/admin/customers')
+            ->assertOk()
+            ->assertJsonPath('data.items.0.lastOrderAt', null);
+    }
+
     public function test_show_returns_customer_with_totals(): void
     {
         $customer = $this->customer();

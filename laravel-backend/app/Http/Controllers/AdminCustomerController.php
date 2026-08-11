@@ -31,10 +31,15 @@ class AdminCustomerController extends Controller
             ->orderByDesc('created_at')
             ->paginate($limit, ['*'], 'page', $page);
 
-        $customers->getCollection()->each(function (User $user) {
-            $user->last_order_at = $user->orders()
-                ->selectRaw('MAX(created_at) as last')
-                ->value('last');
+        $lastOrderDates = \Illuminate\Support\Facades\DB::table('orders')
+            ->select('user_id')
+            ->selectRaw('MAX(created_at) as last_order_at')
+            ->whereIn('user_id', $customers->getCollection()->pluck('id'))
+            ->groupBy('user_id')
+            ->pluck('last_order_at', 'user_id');
+
+        $customers->getCollection()->each(function (User $user) use ($lastOrderDates) {
+            $user->last_order_at = $lastOrderDates->get($user->id);
         });
 
         return response()->json([

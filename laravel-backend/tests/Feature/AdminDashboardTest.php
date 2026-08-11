@@ -5,11 +5,18 @@ namespace Tests\Feature;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
 class AdminDashboardTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Cache::flush();
+    }
 
     private function admin(): User
     {
@@ -74,5 +81,36 @@ class AdminDashboardTest extends TestCase
             ->getJson('/api/admin/analytics')
             ->assertOk()
             ->assertJsonPath('data.range', '30');
+    }
+
+    public function test_revenue_trend_includes_zero_days(): void
+    {
+        $customer = User::factory()->create(['role' => 'customer']);
+        Order::factory()->create([
+            'user_id' => $customer->id,
+            'status' => 'delivered',
+            'total' => 250.00,
+            'paid_at' => now()->subDays(2),
+        ]);
+
+        $response = $this->actingAs($this->admin(), 'sanctum')
+            ->getJson('/api/admin/dashboard')
+            ->assertOk();
+
+        $trend = $response->json('data.revenueTrend');
+        $this->assertCount(30, $trend);
+
+        $twoDaysAgo = now()->subDays(2)->format('Y-m-d');
+        $threeDaysAgo = now()->subDays(3)->format('Y-m-d');
+
+        $orderDay = collect($trend)->firstWhere('date', $twoDaysAgo);
+        $this->assertNotNull($orderDay);
+        $this->assertEquals(250.0, $orderDay['revenue']);
+        $this->assertSame(1, $orderDay['orders']);
+
+        $zeroDay = collect($trend)->firstWhere('date', $threeDaysAgo);
+        $this->assertNotNull($zeroDay);
+        $this->assertEquals(0.0, $zeroDay['revenue']);
+        $this->assertSame(0, $zeroDay['orders']);
     }
 }

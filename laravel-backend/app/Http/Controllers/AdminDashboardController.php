@@ -92,43 +92,47 @@ class AdminDashboardController extends Controller
         $monthStart = $now->copy()->startOfMonth();
         $todayStart = $now->copy()->startOfDay();
 
-        $deliveredTotal = Order::where('status', 'delivered')->sum('total');
+        $orderAgg = Order::query()
+            ->selectRaw("
+                COUNT(*) AS total_orders,
+                SUM(CASE WHEN status = 'delivered' THEN total ELSE 0 END) AS delivered_total,
+                SUM(CASE WHEN status = 'delivered' AND paid_at >= ? THEN total ELSE 0 END) AS revenue_month,
+                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS orders_today,
+                SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS orders_month,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_orders,
+                SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered_count
+            ", [$monthStart->format('Y-m-d H:i:s'), $todayStart->format('Y-m-d H:i:s'), $monthStart->format('Y-m-d H:i:s')])
+            ->first();
 
-        $revenueMonth = Order::where('status', 'delivered')
-            ->where('paid_at', '>=', $monthStart)
-            ->sum('total');
+        $customerAgg = User::query()
+            ->where('role', 'customer')
+            ->selectRaw('COUNT(*) AS total_customers, SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) AS customers_month', [$monthStart->format('Y-m-d H:i:s')])
+            ->first();
 
-        $ordersToday = Order::where('created_at', '>=', $todayStart)->count();
-        $ordersMonth = Order::where('created_at', '>=', $monthStart)->count();
-
-        $customersTotal = User::where('role', 'customer')->count();
-        $customersMonth = User::where('role', 'customer')->where('created_at', '>=', $monthStart)->count();
-
-        $pendingOrderResidual = Order::where('status', 'pending')->count();
-        $avgOrderValue = $deliveredTotal > 0 && Order::where('status', 'delivered')->count() > 0
-            ? $deliveredTotal / Order::where('status', 'delivered')->count()
-            : 0.0;
-
-        $lowStockCount = Product::where('status', 'active')
+        $lowStockCount = Product::query()
+            ->where('status', 'active')
             ->whereColumn('stock', '<=', 'low_stock_threshold')
             ->count();
+
+        $deliveredCount = (int) ($orderAgg->delivered_count ?? 0);
+        $deliveredTotal = (float) ($orderAgg->delivered_total ?? 0);
 
         return [
             'revenue' => [
                 'total' => round($deliveredTotal, 2),
-                'month' => round($revenueMonth, 2),
+                'month' => round((float) ($orderAgg->revenue_month ?? 0), 2),
             ],
             'orders' => [
-                'total' => Order::count(),
-                'today' => $ordersToday,
-                'month' => $ordersMonth,
-                'pending' => $pendingOrderResidual,
+                'total' => (int) ($orderAgg->total_orders ?? 0),
+                'today' => (int) ($orderAgg->orders_today ?? 0),
+                'month' => (int) ($orderAgg->orders_month ?? 0),
+                'pending' => (int) ($orderAgg->pending_orders ?? 0),
             ],
             'customers' => [
-                'total' => $customersTotal,
-                'month' => $customersMonth,
+                'total' => (int) ($customerAgg->total_customers ?? 0),
+                'month' => (int) ($customerAgg->customers_month ?? 0),
             ],
-            'avgOrderValue' => round($avgOrderValue, 2),
+            'avgOrderValue' => $deliveredCount > 0 ? round($deliveredTotal / $deliveredCount, 2) : 0.0,
             'lowStock' => $lowStockCount,
             'asOf' => $now->toISOString(),
         ];
@@ -139,20 +143,22 @@ class AdminDashboardController extends Controller
         $rows = Order::query()
             ->where('status', 'delivered')
             ->where('paid_at', '>=', $from)
-            ->get(['total', 'paid_at'])
-            ->groupBy(fn (Order $o) => $o->paid_at->format('Y-m-d'));
+            ->selectRaw('DATE(paid_at) AS day, SUM(total) AS revenue, COUNT(*) AS orders')
+            ->groupBy('day')
+            ->get()
+            ->keyBy('day');
 
         $days = [];
         $cursor = $from->copy();
 
         while ($cursor <= $now) {
             $key = $cursor->format('Y-m-d');
-            $day = $rows->get($key);
+            $row = $rows->get($key);
 
             $days[] = [
                 'date' => $key,
-                'revenue' => $day ? round($day->sum('total'), 2) : 0.0,
-                'orders' => $day ? $day->count() : 0,
+                'revenue' => $row ? round((float) $row->revenue, 2) : 0.0,
+                'orders' => $row ? (int) $row->orders : 0,
             ];
             $cursor->addDay();
         }
