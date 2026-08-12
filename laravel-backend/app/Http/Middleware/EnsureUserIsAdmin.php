@@ -10,16 +10,13 @@ class EnsureUserIsAdmin
 {
     /**
      * Handle an incoming request.
+     *
+     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $user = $request->user();
-
-        if (! $user || ! $user->isAdmin()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Forbidden: admin access required.',
-            ], 403);
+        if (!$request->user() || $request->user()->role !== 'admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
         }
 
         return $next($request);

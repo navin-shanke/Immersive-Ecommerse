@@ -26,6 +26,13 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
+        // Manual uniqueness check to avoid Laravel bug with Schema::hasTable()
+        if (User::where('email', $request->email)->exists()) {
+            throw ValidationException::withMessages([
+                'email' => ['The email has already been taken.'],
+            ]);
+        }
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
