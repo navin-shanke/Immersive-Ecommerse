@@ -9,4 +9,4 @@ php artisan route:cache
 php artisan view:cache
 
 # Start the main container process
-/start.sh
+exec /entrypoint.sh
