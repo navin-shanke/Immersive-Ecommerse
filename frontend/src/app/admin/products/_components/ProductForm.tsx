@@ -63,7 +63,7 @@ function toFormState(p: AdminProduct | null): FormState {
       featured: false,
       tags: '',
       images: [],
-      variants: [],
+      variants: [] as FormVariant[],
     };
   }
   return {
@@ -90,7 +90,7 @@ function toFormState(p: AdminProduct | null): FormState {
       color: v.color ?? null,
       color_hex: v.colorHex ?? null,
       size: v.size ?? null,
-    })),
+    })) as FormVariant[],
   };
 }
 

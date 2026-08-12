@@ -65,7 +65,7 @@ export default function ProductShowcase({ products, intervalMs = 3000 }: Product
             className="absolute inset-0"
           >
             <Image
-              src={product.images[0]?.url}
+              src={product.images[0]?.url || '/placeholder.svg'}
               alt={product.images[0]?.alt || product.name}
               fill
               priority

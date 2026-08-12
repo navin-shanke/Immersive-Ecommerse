@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Sparkles, ArrowLeft } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { Button, Input, Field } from '../_components/ui';
+import Logo from '@/components/ui/Logo';
 
 export default function AdminLoginPage() {
   const { user, isLoading, isAuthenticated, login } = useAuth();
@@ -58,9 +59,7 @@ export default function AdminLoginPage() {
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(60rem_30rem_at_top,_rgba(99,102,241,0.08),_transparent)]" />
       <div className="relative w-full max-w-sm">
         <div className="flex items-center gap-2.5 mb-8 justify-center">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
+          <Logo size="md" withText={false} />
           <div>
             <p className="text-base font-semibold leading-tight">IMMERSIVE</p>
             <p className="text-[10px] uppercase tracking-widest text-indigo-400/80 leading-tight">Admin Panel</p>
