@@ -6,18 +6,12 @@ const AREA: Area = { x: 0, y: 0, width: 100, height: 80 };
 
 let lastCanvasWidth = 0;
 let lastCanvasHeight = 0;
-let lastDrawCount = 0;
 
 function fakeImage(): HTMLImageElement {
-  const img = new (originalImage())();
+  const img = new globalThis.Image();
   Object.defineProperty(img, 'naturalWidth', { value: 200 });
   Object.defineProperty(img, 'naturalHeight', { value: 160 });
   return img;
-}
-
-let originalImageCtor: typeof Image = globalThis.Image;
-function originalImage(): typeof Image {
-  return originalImageCtor ?? globalThis.Image;
 }
 
 function mockImageLoads(img: HTMLImageElement, fail = false) {
@@ -34,7 +28,7 @@ function mockImageLoads(img: HTMLImageElement, fail = false) {
 const originalCreateElement = document.createElement.bind(document);
 
 function mockCanvas() {
-  const drawSpy = vi.fn(() => { lastDrawCount += 1; });
+  const drawSpy = vi.fn();
   vi.spyOn(document, 'createElement').mockImplementation(
     (tag: string, options?: ElementCreationOptions) => {
       if (tag !== 'canvas') return originalCreateElement(tag, options);
@@ -72,7 +66,6 @@ afterEach(() => {
   vi.restoreAllMocks();
   lastCanvasWidth = 0;
   lastCanvasHeight = 0;
-  lastDrawCount = 0;
 });
 
 describe('loadImage', () => {
