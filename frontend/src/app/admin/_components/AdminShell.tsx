@@ -12,7 +12,6 @@ import {
   Menu,
   X,
   ExternalLink,
-  Sparkles,
   ShoppingCart,
   Users,
   BarChart3,
@@ -21,6 +20,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import Logo from '@/components/ui/Logo';
 
 interface NavItem {
   href: string;
@@ -106,9 +106,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex flex-col h-full">
       <div className="px-5 py-5 flex items-center gap-2.5 border-b border-gray-200 dark:border-zinc-800/70">
-        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-          <Sparkles className="w-4 h-4 text-white" />
-        </div>
+        <Logo size="md" withText={false} />
         <div>
           <p className="text-sm font-semibold text-gray-900 dark:text-zinc-100 leading-tight">IMMERSIVE</p>
           <p className="text-[10px] uppercase tracking-widest text-indigo-600 dark:text-indigo-400/80 leading-tight">Admin Panel</p>
