@@ -13,13 +13,25 @@ import BrandTicker from '@/components/ui/BrandTicker';
 import AmbientBackground from '@/components/effects/AmbientBackground';
 import ParallaxSection from '@/components/effects/ParallaxSection';
 import ProductShowcase from '@/components/ui/ProductShowcase';
+import SkeletonCard from '@/components/ui/SkeletonCard';
+import Logo from '@/components/ui/Logo';
 import { Product } from '@/types/product';
 import api from '@/lib/api';
 
 
 const IntroScene = dynamic(() => import('@/components/three/IntroScene'), {
   ssr: false,
-  loading: () => null,
+  loading: () => (
+    <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center gap-4 bg-black">
+      <div className="animate-pulse"><Logo withText={false} /></div>
+      <p className="text-xs tracking-[0.3em] text-white/40 font-light uppercase">Loading immersive experience&#8230;</p>
+      <div className="flex gap-1.5">
+        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" />
+        <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0.1s' }} />
+        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0.2s' }} />
+      </div>
+    </div>
+  ),
 });
 
 import { homeCategories as categories, features, testimonials } from '@/lib/data/products';
@@ -91,6 +103,7 @@ export default function HomePage() {
   const [introComplete, setIntroComplete] = useState(false);
   const [showContent, setShowContent] = useState(false);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
   const introSeen = useSyncExternalStore(
     subscribeIntroSeen,
     () => (typeof window !== 'undefined' ? sessionStorage.getItem('intro-seen') !== null : false),
@@ -121,6 +134,8 @@ export default function HomePage() {
         }
       } catch (err) {
         console.error('Failed to fetch featured products:', err);
+      } finally {
+        setFeaturedLoading(false);
       }
     }
     fetchFeaturedProducts();
@@ -265,7 +280,7 @@ export default function HomePage() {
         </section>
 
         {/* Trending Section */}
-        <TrendingSection products={featuredProducts.slice(0, 8)} />
+        <TrendingSection products={featuredProducts.slice(0, 8)} loading={featuredLoading} />
 
         {/* Featured Products */}
         <section className="py-16 px-4 bg-white dark:bg-zinc-950">
@@ -281,17 +296,21 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredProducts.slice(0, 4).map((product, i) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.5 }}
-                >
-                  <ProductCard product={product} index={i} />
-                </motion.div>
-              ))}
+              {featuredLoading ? (
+                <SkeletonCard count={4} />
+              ) : (
+                featuredProducts.slice(0, 4).map((product, i) => (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1, duration: 0.5 }}
+                  >
+                    <ProductCard product={product} index={i} />
+                  </motion.div>
+                ))
+              )}
             </div>
           </div>
         </section>

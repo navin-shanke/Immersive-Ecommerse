@@ -12,9 +12,10 @@ import { useUIStore } from '@/stores/useUIStore';
 
 interface TrendingSectionProps {
   products: Product[];
+  loading?: boolean;
 }
 
-export default function TrendingSection({ products }: TrendingSectionProps) {
+export default function TrendingSection({ products, loading = false }: TrendingSectionProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -82,9 +83,22 @@ export default function TrendingSection({ products }: TrendingSectionProps) {
           onScroll={checkScroll}
           className="flex gap-4 overflow-x-auto scrollbar-hide pb-4 -mx-4 px-4"
         >
-          {products.map((product, i) => (
-            <TrendingCard key={product.id} product={product} index={i} />
-          ))}
+          {loading && products.length === 0 ? (
+            <div className="flex gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div
+                  key={i}
+                  data-testid="trending-skeleton"
+                  className="flex-shrink-0 w-[280px] rounded-xl bg-gray-200 dark:bg-zinc-800 animate-pulse"
+                  style={{ height: 280 }}
+                />
+              ))}
+            </div>
+          ) : (
+            products.map((product, i) => (
+              <TrendingCard key={product.id} product={product} index={i} />
+            ))
+          )}
         </div>
       </div>
     </section>
