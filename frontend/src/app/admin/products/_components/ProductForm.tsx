@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { Plus, X, Trash2, ImagePlus, Package, UploadCloud } from 'lucide-react';
 import type { AdminCategory, AdminProduct } from '@/types/admin';
@@ -8,6 +8,7 @@ import type { ProductPayload, ProductImagePayload } from '@/lib/admin-api';
 import { uploadAdminImage } from '@/lib/admin-api';
 import { useUIStore } from '@/stores/useUIStore';
 import { Button, Card, Field, Input, Select, Textarea, Toggle } from '../../_components/ui';
+import ImageCropModal from './ImageCropModal';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
 
@@ -105,6 +106,25 @@ export default function ProductForm({ initial, categories, submitting, onSubmit 
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const addToast = useUIStore((s) => s.addToast);
+  const [editQueue, setEditQueue] = useState<{ src: string; file: File }[]>([]);
+  const currentEdit = editQueue[0] ?? null;
+  const objectUrls = useRef<string[]>([]);
+
+  const revokeObjectUrls = () => {
+    objectUrls.current.forEach((u) => URL.revokeObjectURL(u));
+    objectUrls.current = [];
+  };
+
+  const dequeueEditor = () => {
+    setEditQueue((queue) => {
+      if (queue[0]) URL.revokeObjectURL(queue[0].src);
+      return queue.slice(1);
+    });
+  };
+
+  useEffect(() => {
+    return revokeObjectUrls;
+  }, []);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -128,26 +148,43 @@ export default function ProductForm({ initial, categories, submitting, onSubmit 
       return;
     }
 
-    setUploading(true);
-    try {
-      const uploaded = [...form.images];
-      for (const file of list) {
-        if (file.size > MAX_IMAGE_SIZE) {
-          addToast({ type: 'error', message: `${file.name} is larger than 5 MB and was skipped.` });
-          continue;
-        }
-        const { url } = await uploadAdminImage(file);
-        uploaded.push({ url, alt: '', width: null, height: null });
+    const direct: File[] = [];
+    const toEdit: File[] = [];
+    for (const file of list) {
+      if (file.size > MAX_IMAGE_SIZE) {
+        addToast({ type: 'error', message: `${file.name} is larger than 5 MB and was skipped.` });
+        continue;
       }
-      set('images', uploaded);
-      addToast({ type: 'success', message: 'Image uploaded.' });
-    } catch {
-      addToast({ type: 'error', message: 'Upload failed. Check your connection and try again.' });
-    } finally {
-      setUploading(false);
-      setDragging(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (file.type === 'image/svg+xml') {
+        direct.push(file);
+      } else {
+        toEdit.push(file);
+      }
     }
+
+    let directUploads = 0;
+    for (const file of direct) {
+      try {
+        const { url } = await uploadAdminImage(file);
+        setForm((prev) => ({ ...prev, images: [...prev.images, { url, alt: '', width: null, height: null }] }));
+        directUploads += 1;
+      } catch {
+        addToast({ type: 'error', message: 'Upload failed. Check your connection and try again.' });
+      }
+    }
+    if (directUploads > 0) {
+      addToast({ type: 'success', message: 'Image uploaded.' });
+    }
+
+    if (toEdit.length > 0) {
+      const queue = toEdit.map((file) => ({ src: URL.createObjectURL(file), file }));
+      objectUrls.current.push(...queue.map((q) => q.src));
+      setEditQueue((prev) => [...prev, ...queue]);
+    }
+
+    setUploading(false);
+    setDragging(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
@@ -157,6 +194,30 @@ export default function ProductForm({ initial, categories, submitting, onSubmit 
 
   function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
     if (e.target.files) void handleFiles(e.target.files);
+  }
+
+  async function handleEditorConfirm(file: File) {
+    setUploading(true);
+    try {
+      if (file.size > MAX_IMAGE_SIZE) {
+        addToast({ type: 'error', message: 'Edited PNG exceeds 5 MB. Crop tighter and try again.' });
+        return;
+      }
+      const { url } = await uploadAdminImage(file);
+      setForm((prev) => ({ ...prev, images: [...prev.images, { url, alt: '', width: null, height: null }] }));
+      addToast({ type: 'success', message: 'Image uploaded.' });
+      dequeueEditor();
+    } catch {
+      addToast({ type: 'error', message: 'Upload failed. Check your connection and try again.' });
+    } finally {
+      setUploading(false);
+      setDragging(false);
+    }
+  }
+
+  function handleEditorCancel() {
+    dequeueEditor();
+    setDragging(false);
   }
 
   function validate(): boolean {
@@ -459,6 +520,13 @@ export default function ProductForm({ initial, categories, submitting, onSubmit 
           </Card>
         </div>
       </div>
+
+      <ImageCropModal
+        open={currentEdit !== null}
+        imageSrc={currentEdit?.src ?? ''}
+        onCancel={handleEditorCancel}
+        onConfirm={handleEditorConfirm}
+      />
     </form>
   );
 }
