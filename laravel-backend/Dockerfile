@@ -1,4 +1,4 @@
-FROM webdevops/php-nginx:8.3-alpine
+FROM webdevops/php-nginx:8.4-alpine
 
 # Set working directory
 WORKDIR /app
