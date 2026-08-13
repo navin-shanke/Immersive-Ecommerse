@@ -1,5 +1,14 @@
 import axios from 'axios';
 
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    __isRefresh?: boolean;
+  }
+  export interface InternalAxiosRequestConfig {
+    __isRefresh?: boolean;
+  }
+}
+
 const getBaseURL = () => {
   if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
   // Local Laravel dev server (php artisan serve, port 4000) — falls back only when NEXT_PUBLIC_API_URL is unset
@@ -59,6 +68,56 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+declare global {
+  interface Window {
+    __authRedirecting?: boolean;
+  }
+}
+
+let refreshPromise: Promise<string | null> | null = null;
+
+/**
+ * Single-flight refresh: concurrent 401s all wait on the SAME in-flight
+ * /auth/refresh instead of each rotating (and invalidating) the token.
+ */
+function refreshAccessToken(): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = performRefresh().finally(() => {
+      refreshPromise = null;
+    });
+  }
+  return refreshPromise;
+}
+
+async function performRefresh(): Promise<string | null> {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) return null;
+
+  try {
+    const { data } = await api.request({
+      url: '/auth/refresh',
+      method: 'POST',
+      data: { refreshToken },
+      __isRefresh: true,
+    });
+    localStorage.setItem('accessToken', data.accessToken);
+    localStorage.setItem('refreshToken', data.refreshToken);
+    return data.accessToken as string;
+  } catch {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    return null;
+  }
+}
+
+function redirectToLogin(): void {
+  if (typeof window === 'undefined' || window.__authRedirecting) return;
+  window.__authRedirecting = true;
+  const path = window.location.pathname;
+  const target = path.startsWith('/admin') ? '/admin/login' : '/auth/login';
+  window.location.href = target;
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -67,22 +126,20 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          const { data } = await api.post('/auth/refresh', { refreshToken });
-          localStorage.setItem('accessToken', data.accessToken);
-          localStorage.setItem('refreshToken', data.refreshToken);
-          originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
-          return api(originalRequest);
-        }
-      } catch {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        if (typeof window !== 'undefined') {
-          window.location.href = '/auth/login';
-        }
+      // A failed /auth/refresh itself must never loop back into this handler.
+      if (originalRequest.__isRefresh) {
+        return Promise.reject(error);
       }
+
+      const accessToken = await refreshAccessToken();
+
+      if (accessToken) {
+        originalRequest.headers = originalRequest.headers ?? {};
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return api(originalRequest);
+      }
+
+      redirectToLogin();
     }
 
     return Promise.reject(error);

@@ -16,8 +16,6 @@ class AuthController extends Controller
 {
     private function tokenPair(User $user): array
     {
-        $user->tokens()->where('name', 'refresh')->delete();
-
         $access = $user->createToken('access', ['access'])->plainTextToken;
         $refresh = $user->createToken('refresh', ['refresh'])->plainTextToken;
 
