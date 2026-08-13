@@ -3,7 +3,8 @@
 # Run migrations
 php artisan migrate --force
 
-# Idempotent seeders (admin user + store settings)
+# Idempotent seeders (categories + admin user + store settings)
+php artisan db:seed --class=CategorySeeder --force
 php artisan db:seed --class=AdminUserSeeder --force
 php artisan db:seed --class=StoreSettingsSeeder --force
 
