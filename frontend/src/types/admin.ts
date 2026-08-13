@@ -72,6 +72,7 @@ export interface AdminCategory {
   id: string;
   name: string;
   slug: string;
+  description: string | null;
   image: string | null;
   productCount: number;
 }
@@ -113,7 +114,7 @@ export const ORDER_STATUSES: OrderStatusOption[] = [
 ];
 
 export interface OrderCustomerRef {
-  _id: string;
+  _id: string | null;
   name: string | null;
   email: string | null;
 }

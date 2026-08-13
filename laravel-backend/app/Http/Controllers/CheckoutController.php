@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Cart;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\StoreSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -12,7 +14,12 @@ use Illuminate\Support\Str;
 class CheckoutController extends Controller
 {
     /**
-     * Create a pending order from the user's cart.
+     * Create a pending order.
+     *
+     * Authenticated users check out from their server-side cart. Guests are
+     * allowed when the store's `allow_guest_checkout` setting is enabled and
+     * checkout is not gated by `require_login_for_checkout`; guest orders
+     * submit their items in the request and are stamped with a `guest_token`.
      *
      * Returns the Razorpay-compatible payload the frontend expects:
      * { orderId, razorpayOrderId, amount (in paise), currency }.
@@ -37,44 +44,62 @@ class CheckoutController extends Controller
             'shippingAddress.phone' => ['nullable', 'string'],
             'shippingMethod' => ['nullable', 'string'],
             'promoCode' => ['nullable', 'string'],
+            'items' => ['nullable', 'array', 'min:1'],
+            'items.*.productId' => ['required_with:items', 'string'],
+            'items.*.variantId' => ['required_with:items', 'string'],
+            'items.*.quantity' => ['required_with:items', 'integer', 'min:1', 'max:99'],
         ]);
 
-        $cart = $request->user()->cart;
+        $user = $request->user();
+        $isGuest = $user === null;
 
-        if (! $cart || $cart->items()->count() === 0) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your cart is empty',
-            ], 422);
-        }
+        if ($isGuest) {
+            $requireLogin = StoreSetting::bool('security', 'require_login_for_checkout', false);
 
-        $cart = $cart->load(['items.product.images', 'items.product.variants', 'items.product.category', 'items.variant']);
-
-        $subtotal = 0.0;
-        $orderItems = [];
-
-        foreach ($cart->items as $item) {
-            if (! $item->product || ! $item->variant) {
-                continue;
+            if ($requireLogin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Please sign in to complete your checkout.',
+                ], 401);
             }
-            $variant = $item->variant;
-            $effectivePrice = (float) ($variant->sale_price ?? $variant->price);
-            $subtotal += $effectivePrice * (int) $item->quantity;
 
-            $orderItems[] = [
-                'product_id' => $item->product_id,
-                'variant_id' => $item->variant_id,
-                'name' => $item->product->name,
-                'sku' => $variant->sku ?: $item->product->sku,
-                'unit_price' => $effectivePrice,
+            if (! StoreSetting::bool('security', 'allow_guest_checkout', true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Guest checkout is disabled. Please sign in to continue.',
+                ], 403);
+            }
+
+            if (empty($validated['items'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your cart is empty',
+                ], 422);
+            }
+
+            $entries = collect($validated['items'])->map(fn ($item) => [
+                'productId' => $item['productId'],
+                'variantId' => $item['variantId'],
+                'quantity' => (int) $item['quantity'],
+            ])->all();
+        } else {
+            $cart = $user->cart;
+
+            if (! $cart || $cart->items()->count() === 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your cart is empty',
+                ], 422);
+            }
+
+            $entries = $cart->items->map(fn ($item) => [
+                'productId' => (string) $item->product_id,
+                'variantId' => (string) $item->variant_id,
                 'quantity' => (int) $item->quantity,
-                'options' => $variant->options,
-                'color' => $variant->color,
-                'color_hex' => $variant->color_hex,
-                'size' => $variant->size,
-                'image_url' => $item->product->images->first()?->url,
-            ];
+            ])->all();
         }
+
+        $orderItems = $this->resolveOrderItems($entries);
 
         if (empty($orderItems)) {
             return response()->json([
@@ -82,6 +107,11 @@ class CheckoutController extends Controller
                 'message' => 'Your cart contains unavailable items',
             ], 422);
         }
+
+        $subtotal = round(array_sum(array_map(
+            fn ($item) => (float) $item['unit_price'] * (int) $item['quantity'],
+            $orderItems
+        )), 2);
 
         $discount = 0.0;
         $promoCode = $validated['promoCode'] ?? null;
@@ -105,15 +135,23 @@ class CheckoutController extends Controller
         }
 
         $discountedSubtotal = round($subtotal - $discount, 2);
-        $shipping = $discountedSubtotal > 100 ? 0.0 : 9.99;
-        $tax = round($discountedSubtotal * 0.08, 2);
+
+        $freeShippingThreshold = (float) StoreSetting::get('shipping', 'free_shipping_threshold', '100');
+        $standardFee = (float) StoreSetting::get('shipping', 'standard_fee', '9.99');
+        $taxRate = (float) StoreSetting::get('tax', 'tax_rate', '8');
+
+        $shipping = $discountedSubtotal > $freeShippingThreshold ? 0.0 : $standardFee;
+        $tax = round($discountedSubtotal * ($taxRate / 100), 2);
         $total = round($discountedSubtotal + $shipping + $tax, 2);
 
+        $guestToken = $isGuest ? (string) Str::uuid() : null;
+
         $order = Order::create([
-            'user_id' => $request->user()->id,
+            'user_id' => $user?->id,
+            'guest_token' => $guestToken,
             'order_number' => 'ORD-' . strtoupper(Str::random(10)),
             'status' => 'pending',
-            'subtotal' => round($subtotal, 2),
+            'subtotal' => $subtotal,
             'shipping' => $shipping,
             'tax' => $tax,
             'discount' => $discount,
@@ -130,19 +168,28 @@ class CheckoutController extends Controller
         $amountPaise = (int) round($total * 100);
         $razorpayOrderId = $this->createRazorpayOrder($amountPaise, $order->order_number);
 
+        $data = [
+            'orderId' => (string) $order->id,
+            'razorpayOrderId' => $razorpayOrderId,
+            'amount' => $amountPaise,
+            'currency' => 'INR',
+        ];
+
+        if ($isGuest) {
+            $data['guestToken'] = $guestToken;
+        }
+
         return response()->json([
             'success' => true,
-            'data' => [
-                'orderId' => (string) $order->id,
-                'razorpayOrderId' => $razorpayOrderId,
-                'amount' => $amountPaise,
-                'currency' => 'INR',
-            ],
+            'data' => $data,
         ], 201);
     }
 
     /**
      * Verify a Razorpay payment and mark the order paid.
+     *
+     * Authenticated orders are matched by the user's id; guest orders by a
+     * null user id plus the `guest_token` issued at creation.
      *
      * With no Razorpay secret configured, falls back to test mode: the order is
      * matched and marked paid as long as the supplied razorpay order id matches
@@ -155,11 +202,21 @@ class CheckoutController extends Controller
             'razorpayOrderId' => ['required', 'string'],
             'razorpayPaymentId' => ['required', 'string'],
             'razorpaySignature' => ['required', 'string'],
+            'guestToken' => ['nullable', 'string'],
         ]);
 
-        $order = Order::where('user_id', $request->user()->id)
-            ->where('id', $validated['orderId'])
-            ->first();
+        $user = $request->user();
+
+        $order = $user
+            ? Order::query()
+                ->where('user_id', $user->id)
+                ->where('id', $validated['orderId'])
+                ->first()
+            : Order::query()
+                ->whereNull('user_id')
+                ->where('id', $validated['orderId'])
+                ->where('guest_token', $validated['guestToken'] ?? '')
+                ->first();
 
         if (! $order) {
             return response()->json([
@@ -194,7 +251,7 @@ class CheckoutController extends Controller
             'paid_at' => now(),
         ]);
 
-        if ($cart = $request->user()->cart) {
+        if ($user && $cart = $user->cart) {
             $cart->items()->delete();
         }
 
@@ -202,6 +259,63 @@ class CheckoutController extends Controller
             'success' => true,
             'data' => ['orderId' => (string) $order->id, 'status' => $order->status],
         ]);
+    }
+
+    /**
+     * Resolve raw cart entries into order items with live product/variant data.
+     *
+     * Inactive or missing products/variants are skipped so an order can never
+     * be placed against delisted stock.
+     *
+     * @param  array<int, array{productId: string, variantId: string, quantity: int}>  $entries
+     * @return array<int, array<string, mixed>>
+     */
+    private function resolveOrderItems(array $entries): array
+    {
+        $productIds = array_values(array_unique(array_column($entries, 'productId')));
+        $variantIds = array_values(array_unique(array_column($entries, 'variantId')));
+
+        $products = Product::query()
+            ->whereIn('id', $productIds)
+            ->where('status', 'active')
+            ->with('images')
+            ->get()
+            ->keyBy('id');
+
+        $variants = ProductVariant::query()
+            ->whereIn('product_id', $productIds)
+            ->whereIn('id', $variantIds)
+            ->get()
+            ->keyBy('id');
+
+        $orderItems = [];
+
+        foreach ($entries as $entry) {
+            $product = $products->get($entry['productId']);
+            $variant = $variants->get($entry['variantId']);
+
+            if (! $product || ! $variant) {
+                continue;
+            }
+
+            $effectivePrice = (float) ($variant->sale_price ?? $variant->price);
+
+            $orderItems[] = [
+                'product_id' => $product->id,
+                'variant_id' => $variant->id,
+                'name' => $product->name,
+                'sku' => $variant->sku ?: $product->sku,
+                'unit_price' => $effectivePrice,
+                'quantity' => (int) $entry['quantity'],
+                'options' => $variant->options,
+                'color' => $variant->color,
+                'color_hex' => $variant->color_hex,
+                'size' => $variant->size,
+                'image_url' => $product->images->first()?->url,
+            ];
+        }
+
+        return $orderItems;
     }
 
     /**

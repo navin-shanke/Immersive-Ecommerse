@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
 import CheckoutProgress from '@/components/checkout/CheckoutProgress';
 import ShippingForm from '@/components/checkout/ShippingForm';
 import PaymentForm from '@/components/checkout/PaymentForm';
@@ -10,6 +11,7 @@ import CartSummary from '@/components/cart/CartSummary';
 import { useCartStore } from '@/stores/useCartStore';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useUIStore } from '@/stores/useUIStore';
+import { fetchPublicStoreSettings } from '@/lib/store-settings';
 import { ShippingAddress } from '@/types/order';
 import api from '@/lib/api';
 import { formatPrice } from '@/lib/utils';
@@ -26,6 +28,7 @@ export default function CheckoutPage() {
     razorpayOrderId: string;
     amount: number;
     currency: string;
+    guestToken?: string;
   } | null>(null);
   const cart = useCartStore((s) => s.cart);
   const clearCart = useCartStore((s) => s.clearCart);
@@ -34,11 +37,31 @@ export default function CheckoutPage() {
   const user = useAuthStore((s) => s.user);
   const addToast = useUIStore((s) => s.addToast);
 
+  const { data: publicSettings, isLoading: settingsLoading } = useQuery({
+    queryKey: ['store-settings'],
+    queryFn: fetchPublicStoreSettings,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const securityFlagsLoaded = Boolean(publicSettings?.security);
+  const requireLogin = publicSettings?.security.require_login_for_checkout;
+  const allowGuest = publicSettings?.security.allow_guest_checkout;
+  const guestCheckoutAllowed =
+    securityFlagsLoaded &&
+    !requireLogin &&
+    allowGuest;
+
+  const signInHint = requireLogin
+    ? 'This store requires you to sign in to complete your order.'
+    : allowGuest === false
+      ? 'Guest checkout is disabled. Please sign in to continue.'
+      : 'Create an account or sign in to complete your order.';
+
   const handleShippingSubmit = async (address: ShippingAddress) => {
     setShippingAddress(address);
     setIsProcessing(true);
     try {
-      const { data } = await api.post('/checkout/create-order', {
+      const body: Record<string, unknown> = {
         shippingAddress: {
           firstName: address.firstName,
           lastName: address.lastName,
@@ -52,12 +75,23 @@ export default function CheckoutPage() {
         },
         shippingMethod: 'standard',
         promoCode: promoCode || undefined,
-      });
+      };
+
+      if (!isAuthenticated) {
+        body.items = cart.items.map((item) => ({
+          productId: item.product.id,
+          variantId: item.variant.id,
+          quantity: item.quantity,
+        }));
+      }
+
+      const { data } = await api.post('/checkout/create-order', body);
       setRazorpayOrder({
         orderId: data.data.orderId,
         razorpayOrderId: data.data.razorpayOrderId,
         amount: data.data.amount,
         currency: data.data.currency,
+        guestToken: data.data.guestToken,
       });
       setCurrentStep(1);
     } catch (err: unknown) {
@@ -81,6 +115,7 @@ export default function CheckoutPage() {
         razorpayPaymentId: paymentData.razorpayPaymentId,
         razorpaySignature: paymentData.razorpaySignature,
         orderId: razorpayOrder.orderId,
+        guestToken: razorpayOrder.guestToken,
       });
       clearCart();
       setIsComplete(true);
@@ -98,6 +133,16 @@ export default function CheckoutPage() {
   };
 
   if (!isAuthenticated) {
+    if (settingsLoading || !securityFlagsLoaded) {
+      return (
+        <div className="pt-24 pb-16 px-4">
+          <div className="max-w-md mx-auto text-center py-16 text-gray-500 dark:text-zinc-400">
+            Loading…
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="pt-24 pb-16 px-4">
         <div className="max-w-md mx-auto text-center py-16">
@@ -107,7 +152,7 @@ export default function CheckoutPage() {
             </svg>
           </div>
           <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Sign in to Checkout</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-8">Create an account or sign in to complete your order.</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-8">{signInHint}</p>
           <div className="flex flex-col gap-3">
             <Link
               href="/auth/login?redirect=/checkout"

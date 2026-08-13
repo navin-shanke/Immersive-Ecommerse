@@ -37,14 +37,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/cart/{id}', [CartController::class, 'destroyItem']);
     Route::delete('/cart', [CartController::class, 'destroy']);
 
-    // ─── Checkout ───────────────────────────────────────────────────────────
-    Route::post('/checkout/create-order', [CheckoutController::class, 'createOrder']);
-    Route::post('/checkout/verify', [CheckoutController::class, 'verify']);
-
     // Customer orders
     Route::get('/orders', [CustomerOrderController::class, 'index']);
     Route::get('/orders/{id}', [CustomerOrderController::class, 'show']);
 });
+
+// ─── Checkout (auth optional; guest access governed by store settings) ──────
+Route::post('/checkout/create-order', [CheckoutController::class, 'createOrder']);
+Route::post('/checkout/verify', [CheckoutController::class, 'verify']);
 
 // ─── Public catalogue ───────────────────────────────────────────────────────
 Route::middleware(['maintenance'])->group(function () {

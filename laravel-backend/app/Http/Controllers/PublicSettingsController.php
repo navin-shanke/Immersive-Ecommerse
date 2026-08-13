@@ -23,6 +23,8 @@ class PublicSettingsController extends Controller
                     ],
                     'security' => [
                         'maintenance_mode' => StoreSetting::bool('security', 'maintenance_mode'),
+                        'allow_guest_checkout' => StoreSetting::bool('security', 'allow_guest_checkout', true),
+                        'require_login_for_checkout' => StoreSetting::bool('security', 'require_login_for_checkout', false),
                     ],
                 ],
             ]);

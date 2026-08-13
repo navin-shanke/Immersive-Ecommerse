@@ -84,7 +84,7 @@ export default function AdminCategoriesPage() {
   }
 
   function openEdit(c: AdminCategory) {
-    setForm({ name: c.name, slug: c.slug, description: '', image: c.image ?? '' });
+    setForm({ name: c.name, slug: c.slug, description: c.description ?? '', image: c.image ?? '' });
     setFormError(null);
     setEditor({ category: c, open: true });
   }

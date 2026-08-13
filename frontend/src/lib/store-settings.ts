@@ -11,6 +11,8 @@ export interface PublicStoreSettings {
   };
   security: {
     maintenance_mode: boolean;
+    allow_guest_checkout: boolean;
+    require_login_for_checkout: boolean;
   };
 }
 

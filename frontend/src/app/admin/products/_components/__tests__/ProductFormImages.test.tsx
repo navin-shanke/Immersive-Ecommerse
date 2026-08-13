@@ -24,8 +24,8 @@ vi.mock('@/lib/image-crop', () => ({
   toPngFile: vi.fn(() => Promise.resolve(new File([''], 'cropped.png', { type: 'image/png' }))),
 }));
 
-const categories: { id: string; name: string; slug: string; image: string | null; productCount: number }[] = [
-  { id: 'c1', name: 'Electronics', slug: 'electronics', image: null, productCount: 0 },
+const categories: { id: string; name: string; slug: string; description: string | null; image: string | null; productCount: number }[] = [
+  { id: 'c1', name: 'Electronics', slug: 'electronics', description: null, image: null, productCount: 0 },
 ];
 
 function pngFile(name = 'img.png'): File {

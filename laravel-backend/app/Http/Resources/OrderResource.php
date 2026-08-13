@@ -29,9 +29,9 @@ class OrderResource extends JsonResource
             'shippingMethod' => $this->shipping_method,
             'shippingAddress' => $address,
             'customer' => [
-                '_id' => (string) $this->user_id,
-                'name' => $this->user->name ?? null,
-                'email' => $this->user->email ?? null,
+                '_id' => $this->user_id !== null ? (string) $this->user_id : null,
+                'name' => $this->user?->name ?? ($this->user_id === null ? 'Guest' : null),
+                'email' => $this->user?->email ?? null,
             ],
             'items' => $this->whenLoaded('items', fn () => OrderItemResource::collection($this->items)),
             'itemsSummary' => ! $this->relationLoaded('items') ? [

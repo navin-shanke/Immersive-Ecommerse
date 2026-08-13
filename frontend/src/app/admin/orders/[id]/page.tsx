@@ -210,12 +210,17 @@ export default function AdminOrderDetailPage() {
             </h3>
             <p className="text-sm font-medium text-gray-900 dark:text-zinc-200">{order.customer.name ?? '—'}</p>
             <p className="text-sm text-gray-500 dark:text-zinc-500 mt-0.5 break-all">{order.customer.email ?? '—'}</p>
-            <Link
-              href={`/admin/customers/${order.customer._id}`}
-              className="inline-block mt-3 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 transition-colors"
-            >
-              View customer profile →
-            </Link>
+            {order.customer._id && (
+              <Link
+                href={`/admin/customers/${order.customer._id}`}
+                className="inline-block mt-3 text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 transition-colors"
+              >
+                View customer profile →
+              </Link>
+            )}
+            {!order.customer._id && (
+              <p className="text-[11px] text-gray-400 dark:text-zinc-600 mt-3">Guest order — no account on file.</p>
+            )}
           </Card>
 
           <Card className="p-5">
