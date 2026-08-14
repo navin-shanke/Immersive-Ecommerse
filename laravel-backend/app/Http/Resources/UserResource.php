@@ -17,8 +17,10 @@ class UserResource extends JsonResource
         return [
             'id' => (string) $this->id,
             'name' => $this->name,
+            'phone' => $this->phone,
+            'address' => $this->address,
             'email' => $this->email,
-            'avatar' => null,
+            'avatar' => $this->avatar_path ? $request->getSchemeAndHttpHost().'/storage/'.$this->avatar_path : null,
             'role' => $this->role,
             'createdAt' => $this->created_at?->toISOString(),
         ];

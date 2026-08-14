@@ -12,6 +12,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerOrderController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PublicProductController;
 use App\Http\Controllers\PublicSettingsController;
 use App\Http\Controllers\WishlistController;
@@ -29,6 +30,8 @@ Route::post('/auth/refresh', [AuthController::class, 'refresh']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::put('/auth/me', [ProfileController::class, 'update']);
+    Route::post('/auth/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     // ─── Cart ───────────────────────────────────────────────────────────────
