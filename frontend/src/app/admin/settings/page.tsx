@@ -81,15 +81,18 @@ const GROUP_SPECS: GroupSpec[] = [
 
 type Draft = Record<string, unknown>;
 
-function normalizeValue(value: unknown): unknown {
+export function normalizeValue(value: unknown): unknown {
   if (value === null || value === undefined) return '';
   if (typeof value === 'boolean') return value;
   if (typeof value === 'number') return value;
-  const s = String(value).trim();
+  const raw = String(value);
+  const s = raw.trim();
   if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
   if (s === 'true') return true;
   if (s === 'false') return false;
-  return s;
+  // Return the untrimmed string so leading/trailing spaces (e.g. a space the
+  // user just typed, or a multi-word announcement) are preserved in the input.
+  return raw;
 }
 
 export default function AdminSettingsPage() {
