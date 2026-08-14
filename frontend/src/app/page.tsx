@@ -114,6 +114,8 @@ export default function HomePage() {
   const heroY = useTransform(scrollY, [0, 500], [0, 150]);
   const heroOpacity = useTransform(scrollY, [0, 300], [1, 0]);
 
+  const showHero = showContent || introSeen;
+
   useEffect(() => {
     if (introSeen) {
       return;
@@ -156,12 +158,12 @@ export default function HomePage() {
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               <motion.div
                 initial={{ opacity: 0, x: -30 }}
-                animate={showContent ? { opacity: 1, x: 0 } : {}}
+                animate={showHero ? { opacity: 1, x: 0 } : {}}
                 transition={{ delay: 0.2, duration: 0.6 }}
               >
                 <motion.span
                   initial={{ opacity: 0, scale: 0.9 }}
-                  animate={showContent ? { opacity: 1, scale: 1 } : {}}
+                  animate={showHero ? { opacity: 1, scale: 1 } : {}}
                   transition={{ delay: 0.1 }}
                   className="inline-block px-4 py-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 text-sm font-medium rounded-full mb-6"
                 >
@@ -201,7 +203,7 @@ export default function HomePage() {
 
               <motion.div
                 initial={{ opacity: 0, x: 30 }}
-                animate={showContent ? { opacity: 1, x: 0 } : {}}
+                animate={showHero ? { opacity: 1, x: 0 } : {}}
                 transition={{ delay: 0.4, duration: 0.6 }}
                 className="hidden lg:block"
               >

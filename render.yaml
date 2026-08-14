@@ -1,0 +1,74 @@
+# Render Blueprint — infra-as-code for the Laravel backend.
+# Docs: https://render.com/docs/blueprint-spec
+databases:
+  - name: immersive-ecommerce-db
+    plan: free
+    databaseName: immersive_ecommerce
+    user: immersive_app
+
+services:
+  - type: web
+    name: immersive-ecommerse-api
+    runtime: docker
+    rootDir: laravel-backend
+    dockerfilePath: Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /
+    disk:
+      name: storage
+      mountPath: /app/storage
+      sizeGB: 1
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_URL
+        sync: false
+      - key: APP_KEY
+        generateValue: true
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        fromDatabase:
+          name: immersive-ecommerce-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: immersive-ecommerce-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: immersive-ecommerce-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: immersive-ecommerce-db
+          property: host
+      - key: DB_SSLMODE
+        value: require
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: FILESYSTEM_DISK
+        value: public
+      - key: SANCTUM_STATEFUL_DOMAINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
