@@ -29,6 +29,24 @@ export default function ImageCropModal({ open, imageSrc, onCancel, onConfirm }: 
   const [area, setArea] = useState<Area | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Reset per-image editing state whenever a fresh image is presented or the
+  // modal (re)opens. The component instance persists across close/reopen, so
+  // without this a second upload would inherit the previous save's
+  // `saving=true` guard (infinite spinner) and stale crop area. React
+  // recommends adjusting state during render for this "reset on prop change"
+  // case rather than in an effect.
+  const [prev, setPrev] = useState({ open, imageSrc });
+  if (prev.open !== open || prev.imageSrc !== imageSrc) {
+    setPrev({ open, imageSrc });
+    if (open) {
+      setSaving(false);
+      setArea(null);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setRotation(0);
+    }
+  }
+
   const onCropComplete = useCallback((_: Area, croppedAreaPixels: Area) => {
     setArea(croppedAreaPixels);
   }, []);

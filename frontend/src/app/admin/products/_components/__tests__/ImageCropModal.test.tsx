@@ -69,4 +69,20 @@ describe('ImageCropModal', () => {
     const arg = baseProps.onConfirm.mock.calls[0][0] as File;
     expect(arg.name).toBe('cropped.png');
   });
+
+  it('allows a second Save after the modal closes and reopens with a new image', async () => {
+    const { rerender } = render(<ImageCropModal {...baseProps} open imageSrc="blob:one" />);
+    fireEvent.click(screen.getByText('complete-crop'));
+    fireEvent.click(screen.getByText('Save & Upload'));
+    await waitFor(() => expect(baseProps.onConfirm).toHaveBeenCalledTimes(1));
+
+    // Parent closes the modal (opens stays false, same mounted instance).
+    rerender(<ImageCropModal {...baseProps} open={false} imageSrc="blob:one" />);
+    // A second file drops: modal reopens with a new source.
+    rerender(<ImageCropModal {...baseProps} open imageSrc="blob:two" />);
+
+    fireEvent.click(screen.getByText('complete-crop'));
+    fireEvent.click(screen.getByText('Save & Upload'));
+    await waitFor(() => expect(baseProps.onConfirm).toHaveBeenCalledTimes(2));
+  });
 });
