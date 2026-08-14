@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 import { useWishlistStore } from '@/stores/useWishlistStore';
@@ -24,7 +24,7 @@ export default function WishlistTab() {
   const [error, setError] = useState('');
   const addToast = useUIStore((s) => s.addToast);
 
-  const load = useCallback(async () => {
+  const load = async () => {
     setLoading(true);
     setError('');
     try {
@@ -39,11 +39,30 @@ export default function WishlistTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    load();
-  }, [load]);
+    let cancelled = false;
+    api
+      .get('/wishlist')
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success && Array.isArray(data?.data?.items)) {
+          setItems(data.data.items);
+        } else {
+          setItems([]);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError('Unable to load your wishlist. Please try again.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleRemove = async (product: WishlistProduct) => {
     await useWishlistStore.getState().toggleWishlist(product._id);

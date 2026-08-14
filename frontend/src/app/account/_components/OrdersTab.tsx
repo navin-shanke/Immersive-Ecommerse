@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '@/lib/api';
 
@@ -32,35 +32,37 @@ export default function OrdersTab() {
   const [ordersLoading, setOrdersLoading] = useState(true);
   const [ordersError, setOrdersError] = useState('');
 
-  const loadOrders = useCallback(async () => {
-    setOrdersLoading(true);
-    setOrdersError('');
-    try {
-      const { data } = await api.get('/orders');
-      if (data?.success) {
-        const raw = data.data?.orders || [];
-        setOrders(
-          raw.map((o: ApiOrder) => ({
-            ...o,
-            items:
-              o.items?.map((i) => ({
-                name: i.name || 'Item',
-                quantity: i.quantity || 1,
-              })) || [],
-            total: Number(o.total) || 0,
-          }))
-        );
-      }
-    } catch {
-      setOrdersError('Unable to load your orders. Please try again.');
-    } finally {
-      setOrdersLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+    let cancelled = false;
+    api
+      .get('/orders')
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success) {
+          const raw = data.data?.orders || [];
+          setOrders(
+            raw.map((o: ApiOrder) => ({
+              ...o,
+              items:
+                o.items?.map((i) => ({
+                  name: i.name || 'Item',
+                  quantity: i.quantity || 1,
+                })) || [],
+              total: Number(o.total) || 0,
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setOrdersError('Unable to load your orders. Please try again.');
+      })
+      .finally(() => {
+        if (!cancelled) setOrdersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (ordersLoading) {
     return (
