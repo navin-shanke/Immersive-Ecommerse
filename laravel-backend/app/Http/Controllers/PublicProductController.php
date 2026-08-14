@@ -99,7 +99,15 @@ class PublicProductController extends Controller
         $product = Product::with(['category', 'images', 'variants'])
             ->where('status', 'active')
             ->where(function ($q) use ($idOrSlug) {
-                $q->where('id', $idOrSlug)->orWhere('slug', $idOrSlug);
+                $q->where('slug', $idOrSlug);
+
+                // Only compare against the integer id column when the value
+                // is actually numeric. A non-numeric slug compared against a
+                // bigint column raises an invalid input syntax error on
+                // PostgreSQL, which surfaces as a 500 Server Error.
+                if (ctype_digit($idOrSlug)) {
+                    $q->orWhere('id', (int) $idOrSlug);
+                }
             })
             ->first();
 
@@ -120,7 +128,15 @@ class PublicProductController extends Controller
 
     public function related(Request $request, string $id): JsonResponse
     {
-        $product = Product::find($id);
+        $product = Product::query()
+            ->where(function ($q) use ($id) {
+                $q->where('slug', $id);
+
+                if (ctype_digit($id)) {
+                    $q->orWhere('id', (int) $id);
+                }
+            })
+            ->first();
 
         if (! $product) {
             return response()->json([
