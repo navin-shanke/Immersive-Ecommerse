@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { User } from '@/types/user';
 import api from '@/lib/api';
 import { useCartStore } from '@/stores/useCartStore';
+import { useWishlistStore } from '@/stores/useWishlistStore';
 
 const USER_STORAGE_KEY = 'immersive_user';
 
@@ -23,6 +24,7 @@ interface AuthState {
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   loadUser: () => Promise<void>;
+  updateUser: (user: User) => void;
 }
 
 let userLoaded = false;
@@ -42,6 +44,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     userLoaded = true;
     set({ user, isAuthenticated: true, isMockAuth: false, isLoading: false });
     await useCartStore.getState().mergeGuestCart();
+    await useWishlistStore.getState().mergeGuestWishlist();
   },
 
   signup: async (name, email, password) => {
@@ -53,6 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     userLoaded = true;
     set({ user, isAuthenticated: true, isMockAuth: false, isLoading: false });
     await useCartStore.getState().mergeGuestCart();
+    await useWishlistStore.getState().mergeGuestWishlist();
   },
 
   logout: () => {
@@ -62,6 +66,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     userLoaded = false;
     set({ user: null, isAuthenticated: false, isMockAuth: false, isLoading: false });
     useCartStore.getState().resetCart();
+    useWishlistStore.getState().clearWishlist();
   },
 
   loadUser: async () => {
@@ -81,6 +86,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       saveUserToStorage(user);
       userLoaded = true;
       set({ user, isAuthenticated: true, isMockAuth: false, isLoading: false });
+      await useWishlistStore.getState().hydrateWishlist();
     } catch {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -88,5 +94,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       userLoaded = true;
       set({ isLoading: false });
     }
+  },
+
+  updateUser: (user) => {
+    saveUserToStorage(user);
+    set({ user });
   },
 }));
