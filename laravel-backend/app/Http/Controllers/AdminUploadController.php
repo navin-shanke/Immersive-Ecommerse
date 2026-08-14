@@ -41,7 +41,14 @@ class AdminUploadController extends Controller
         }
 
         $filename = Str::random(24).'.'.strtolower($extension);
-        $file->storeAs('uploads', $filename, 'public');
+        $stored = $file->storeAs('uploads', $filename, 'public');
+
+        if ($stored === false || ! Storage::disk('public')->exists('uploads/'.$filename)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to store the uploaded file. Please check server storage permissions and try again.',
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,
