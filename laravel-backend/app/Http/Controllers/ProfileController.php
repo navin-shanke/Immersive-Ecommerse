@@ -18,7 +18,6 @@ class ProfileController extends Controller
         'image/gif',
         'image/avif',
         'image/bmp',
-        'image/svg+xml',
     ];
 
     public function update(Request $request): JsonResponse
@@ -54,16 +53,16 @@ class ProfileController extends Controller
         if (! in_array($mime, self::ALLOWED_MIMES, true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unsupported file type. Allowed: JPG, PNG, WebP, GIF, AVIF, BMP, SVG.',
+                'message' => 'Unsupported file type. Allowed: JPG, PNG, WebP, GIF, AVIF, BMP.',
             ], 422);
         }
 
-        $extension = $file->getClientOriginalExtension();
+        $extension = strtolower(Str::afterLast($mime, '/'));
         if (! $extension) {
-            $extension = Str::afterLast($mime, '/');
+            $extension = strtolower($file->getClientOriginalExtension());
         }
 
-        $filename = Str::random(24).'.'.strtolower($extension);
+        $filename = Str::random(24).'.'.$extension;
         $stored = $file->storeAs('avatars', $filename, 'public');
 
         if ($stored === false || ! Storage::disk('public')->exists('avatars/'.$filename)) {

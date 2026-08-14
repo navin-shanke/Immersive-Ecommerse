@@ -4,7 +4,7 @@ import api from '@/lib/api';
 
 interface WishlistState {
   items: string[];
-  toggleWishlist: (productId: string) => Promise<void>;
+  toggleWishlist: (productId: string) => Promise<boolean>;
   isInWishlist: (productId: string) => boolean;
   clearWishlist: () => void;
   hydrateWishlist: () => Promise<void>;
@@ -38,7 +38,7 @@ export const useWishlistStore = create<WishlistState>()(
         const next = isIn ? items.filter((id) => id !== productId) : [...items, productId];
         set({ items: next });
 
-        if (!hasToken()) return;
+        if (!hasToken()) return true;
 
         try {
           if (isIn) {
@@ -46,8 +46,10 @@ export const useWishlistStore = create<WishlistState>()(
           } else {
             await api.post('/wishlist', { product_id: productId });
           }
+          return true;
         } catch {
           set({ items });
+          return false;
         }
       },
 
@@ -69,7 +71,8 @@ export const useWishlistStore = create<WishlistState>()(
           try {
             await api.post('/wishlist/merge', { product_ids: guest });
           } catch {
-            // keep guest items; retried on next login
+            // Merge failed — keep the guest items intact; retried on next login.
+            return;
           }
         }
 

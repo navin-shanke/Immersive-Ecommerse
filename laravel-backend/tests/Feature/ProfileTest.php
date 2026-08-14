@@ -127,4 +127,15 @@ class ProfileTest extends TestCase
                 'file' => UploadedFile::fake()->create('doc.txt', 100, 'text/plain'),
             ])->assertStatus(422);
     }
+
+    public function test_avatar_rejects_svg(): void
+    {
+        Storage::fake('public');
+        $user = $this->customer();
+
+        $this->actingAs($user, 'sanctum')
+            ->postJson('/api/auth/avatar', [
+                'file' => UploadedFile::fake()->create('avatar.svg', 100, 'image/svg+xml'),
+            ])->assertStatus(422);
+    }
 }

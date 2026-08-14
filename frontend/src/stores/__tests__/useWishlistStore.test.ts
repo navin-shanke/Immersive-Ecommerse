@@ -72,6 +72,19 @@ describe('useWishlistStore', () => {
     expect(useWishlistStore.getState().isInWishlist('p1')).toBe(false);
   });
 
+  it('rolls back local state when DELETE fails', async () => {
+    localStorage.setItem('accessToken', 't');
+    mockedApi.post.mockResolvedValue({ data: { success: true } });
+    mockedApi.delete.mockRejectedValue(new Error('network'));
+
+    await useWishlistStore.getState().toggleWishlist('p1');
+    expect(useWishlistStore.getState().isInWishlist('p1')).toBe(true);
+
+    await useWishlistStore.getState().toggleWishlist('p1');
+    expect(useWishlistStore.getState().isInWishlist('p1')).toBe(true);
+    expect(mockedApi.delete).toHaveBeenCalledWith('/wishlist/p1');
+  });
+
   it('hydrateWishlist loads server ids when authenticated', async () => {
     localStorage.setItem('accessToken', 't');
     mockedApi.get.mockResolvedValue({

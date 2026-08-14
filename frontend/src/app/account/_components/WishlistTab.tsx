@@ -24,9 +24,7 @@ export default function WishlistTab() {
   const [error, setError] = useState('');
   const addToast = useUIStore((s) => s.addToast);
 
-  const load = async () => {
-    setLoading(true);
-    setError('');
+  const fetchWishlist = async () => {
     try {
       const { data } = await api.get('/wishlist');
       if (data?.success && Array.isArray(data?.data?.items)) {
@@ -36,26 +34,13 @@ export default function WishlistTab() {
       }
     } catch {
       setError('Unable to load your wishlist. Please try again.');
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .get('/wishlist')
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success && Array.isArray(data?.data?.items)) {
-          setItems(data.data.items);
-        } else {
-          setItems([]);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError('Unable to load your wishlist. Please try again.');
-      })
+    Promise.resolve()
+      .then(fetchWishlist)
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -65,9 +50,10 @@ export default function WishlistTab() {
   }, []);
 
   const handleRemove = async (product: WishlistProduct) => {
-    await useWishlistStore.getState().toggleWishlist(product._id);
+    const removed = await useWishlistStore.getState().toggleWishlist(product._id);
+    if (!removed) return;
     addToast({ type: 'success', message: `${product.name} removed from wishlist` });
-    load();
+    fetchWishlist();
   };
 
   if (loading) {

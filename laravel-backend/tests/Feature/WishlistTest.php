@@ -35,11 +35,9 @@ class WishlistTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonCount(1, 'data.items')
             ->assertJsonPath('data.items.0._id', (string) $wishlisted->id);
-
-        $this->assertNotSame((string) $other->id, (string) $wishlisted->id);
     }
 
-    public function test_merge_orders_newest_first(): void
+    public function test_index_orders_newest_first(): void
     {
         $user = $this->customer();
         $a = Product::factory()->create(['status' => 'active']);

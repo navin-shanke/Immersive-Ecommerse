@@ -62,7 +62,7 @@ class WishlistController extends Controller
     public function merge(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'product_ids' => ['required', 'array'],
+            'product_ids' => ['required', 'array', 'max:1000'],
             'product_ids.*' => ['integer', 'exists:products,id'],
         ]);
 
