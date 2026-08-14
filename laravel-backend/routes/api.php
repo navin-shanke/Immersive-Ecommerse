@@ -14,6 +14,7 @@ use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\PublicProductController;
 use App\Http\Controllers\PublicSettingsController;
+use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -40,6 +41,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Customer orders
     Route::get('/orders', [CustomerOrderController::class, 'index']);
     Route::get('/orders/{id}', [CustomerOrderController::class, 'show']);
+
+    // ─── Wishlist ─────────────────────────────────────────────────────────────
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist', [WishlistController::class, 'store']);
+    Route::post('/wishlist/merge', [WishlistController::class, 'merge']);
+    Route::delete('/wishlist/{productId}', [WishlistController::class, 'destroy']);
 });
 
 // ─── Checkout (auth optional; guest access governed by store settings) ──────
