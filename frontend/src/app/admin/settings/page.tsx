@@ -111,6 +111,9 @@ export default function AdminSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'settings'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] });
       queryClient.invalidateQueries({ queryKey: ['admin', 'analytics'] });
+      // Storefront reads the same cache via ['store-settings'] (SiteChrome) —
+      // invalidate it so announcement/maintenance changes appear immediately.
+      queryClient.invalidateQueries({ queryKey: ['store-settings'] });
       setTimeout(() => setSavedGroup(null), 3000);
     },
   });

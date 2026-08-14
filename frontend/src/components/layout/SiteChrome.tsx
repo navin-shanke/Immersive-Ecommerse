@@ -23,6 +23,12 @@ export default function SiteChrome({ children }: { children: React.ReactNode }) 
     queryKey: ['store-settings'],
     queryFn: fetchPublicStoreSettings,
     staleTime: 5 * 60 * 1000,
+    // Re-fetch whenever this tab regains focus so admin changes (announcement,
+    // maintenance mode, etc.) appear without a hard refresh. The global client
+    // sets refetchOnWindowFocus: false, so it must be re-enabled here. 'always'
+    // because another tab (admin) may have changed the data since this tab
+    // last fetched — staleness can't be known cross-tab.
+    refetchOnWindowFocus: 'always',
     enabled: !isAdmin,
   });
 
