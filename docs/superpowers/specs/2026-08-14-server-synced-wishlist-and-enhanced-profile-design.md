@@ -101,7 +101,7 @@ Stays hybrid, keeps the existing public API so `ProductCard.tsx:22-23,44` and `p
   - `hydrateWishlist(): Promise<void>` — when authenticated, replace `items` from `GET /wishlist` (extract product `_id`); when logged out, read from localStorage.
   - `mergeGuestWishlist(): Promise<void>` — POST local-only IDs to `/wishlist/merge`, then clear the local list and refresh `items` from the server. Called by `useAuthStore` in `login`/`signup` (mirrors `mergeGuestCart`, `useAuthStore.ts:44,55`).
   - `toggleWishlist():` — if authenticated, optimistically update local `items` + fire `POST /wishlist` or `DELETE /wishlist/{id}`, rollback + best-effort toast on failure; if guest, update localStorage (existing behavior). `isInWishlist` stays a pure selector over `items`.
-  - `clearWishlist()` — server empty + local clear (used on logout path; existing `logout` already resets cart).
+  - `clearWishlist(): void` — **local-only** clear (used on logout path so no account data lingers in the browser). Server-side rows are intentionally NOT deleted on logout — the account wishlist must survive across sessions and devices.
 - Keep `persist` for the guest list with the same `wishlist-storage` key (store shape grows; old persisted values are `{ state: { items: [...] }, version: 0 }` — keep `version` semantics compatible so existing localStorage carries over).
 
 #### `src/stores/useAuthStore.ts`
@@ -130,7 +130,7 @@ The page keeps the redirect-to-login guard (`page.tsx:41-44`), loading skeleton,
 #### Cart/wishlist interplay
 
 - No changes to `ProductCard.tsx` or `products/[id]/page.tsx` (store API unchanged).
-- Logout already calls `useCartStore.getState().resetCart()` (`useAuthStore.ts:64`); add `useWishlistStore.getState().clearWishlist()` alongside so no account data lingers locally.
+- Logout already calls `useCartStore.getState().resetCart()` (`useAuthStore.ts:64`); add `useWishlistStore.getState().clearWishlist()` alongside so no account data lingers locally (server copy is preserved).
 
 ## Error Handling
 
